@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gioco Interattivo con Manopola e Sovrapposizione</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+
+    .background-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+      min-height: 100%;
+      z-index: -1;
+      object-fit: cover;
+    }
+
+    .container {
+      width: 1100px;
+      height: 600px;
+      background-color: rgba(26, 26, 26, 0.85);
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+      border-radius: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .window {
+      width: 350px;
+      height: 150px;
+      background-color: #101010;
+      border: 3px solid #00ffff;
+      box-shadow: 0 0 15px #00ffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 3rem;
+      color: #00ffff;
+      font-family: 'Digital-7 Mono', monospace;
+      margin-bottom: 30px;
+      text-shadow: 0 0 10px #00ffff;
+    }
+
+    .knobs {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .knob-wrapper {
+      position: relative;
+      width: 180px;
+      height: 180px;
+    }
+
+    .knob-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .knob-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none; /* Questo impedisce all'overlay di interferire con l'interazione */
+    }
+
+    .knob {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.2s ease-in-out;
+      z-index: 1;
+    }
+
+    .knob img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .knob span {
+      position: absolute;
+      font-size: 2rem;
+      color: white;
+      font-family: 'Digital-7 Mono', monospace;
+      z-index: 3; /* Il numero deve essere sempre in primo piano */
+    }
+
+    /* Messaggio popup */
+    .message-popup {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px;
+      background-color: #1a1a1a;
+      border: 2px solid #00ffff;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.5rem;
+      color: white;
+      z-index: 10;
+    }
+
+    /* Stile della barra di caricamento */
+    .progress-bar-container {
+      width: 100%;
+      background-color: #ddd;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 20px;
+      background-color: red;
+      border-radius: 10px;
+      transition: width 2s ease-in-out, background-color 0.5s;
+    }
+
+    /* Schermata successiva */
+    .next-screen {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 20;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .next-screen video {
+      width: 80%;
+      height: auto;
+    }
+
+    /* Popup con messaggio personalizzato */
+    .custom-popup {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      background-color: rgba(26, 26, 26, 0.95);
+      padding: 30px;
+      border-radius: 10px;
+      color: #fff;
+      text-align: center;
+      font-size: 1.5rem;
+      z-index: 30;
+    }
+
+    .custom-popup b {
+      font-size: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Video di sfondo -->
+  <video class="background-video" autoplay muted loop>
+    <source src="video-di-sfondo.mp4" type="video/mp4">
+    Il tuo browser non supporta la riproduzione video.
+  </video>
+
+  <div class="container">
+    <div class="window" id="window">0 0 0 0</div>
+    <div class="knobs">
+      <!-- Manopola 1 -->
+      <div class="knob-wrapper">
+        <img src="cornice.png" alt="Cornice" class="knob-frame">
+        <div class="knob" id="knob1" data-value="0">
+          <img src="manopola1.png" alt="Manopola 1">
+          <span>0</span>
+        </div>
+        <img src="overlay1.png" alt="Overlay 1" class="knob-overlay">
+      </div>
+
+      <!-- Manopola 2 -->
+      <div class="knob-wrapper">
+        <img src="cornice.png" alt="Cornice" class="knob-frame">
+        <div class="knob" id="knob2" data-value="0">
+          <img src="manopola2.png" alt="Manopola 2">
+          <span>0</span>
+        </div>
+        <img src="overlay2.png" alt="Overlay 2" class="knob-overlay">
+      </div>
+
+      <!-- Manopola 3 -->
+      <div class="knob-wrapper">
+        <img src="cornice.png" alt="Cornice" class="knob-frame">
+        <div class="knob" id="knob3" data-value="0">
+          <img src="manopola3.png" alt="Manopola 3">
+          <span>0</span>
+        </div>
+        <img src="overlay3.png" alt="Overlay 3" class="knob-overlay">
+      </div>
+
+      <!-- Manopola 4 -->
+      <div class="knob-wrapper">
+        <img src="cornice.png" alt="Cornice" class="knob-frame">
+        <div class="knob" id="knob4" data-value="0">
+          <img src="manopola4.png" alt="Manopola 4">
+          <span>0</span>
+        </div>
+        <img src="overlay4.png" alt="Overlay 4" class="knob-overlay">
+      </div>
+    </div>
+  </div>
+
+  <!-- Messaggio popup -->
+  <div class="message-popup" id="messagePopup">
+    <p>Codice corretto, avvio procedura allineamento parabola...</p>
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <!-- Schermata successiva -->
+  <div class="next-screen" id="nextScreen">
+    <video autoplay muted loop>
+      <source src="video-successivo.mp4" type="video/mp4">
+      Il tuo browser non supporta la riproduzione video.
+    </video>
+    <div class="custom-popup" id="customPopup">
+      <p>Utilizza questi valori per effettuare il puntamento della parabola</p>
+      <p>Angolo di rotazione della parabola sul piano orizzontale (valore riferito rispetto al nord)</p>
+      <p><b>Azimuth: 175°</b></p>
+      <p>Successivamente contattare il canale radio</p>
+      <p><b>PMR 3 o il numero 3406837002</b></p>
+     
+    </div>
+  </div>
+
+  <!-- Audio Effects -->
+  <audio id="knobRotateSound" src="suono-ruotazione.mp3" preload="auto"></audio>
+  <audio id="loadingSound" src="suono-caricamento.mp3" preload="auto"></audio>
+  <audio id="loadingCompleteSound" src="suono-completo.mp3" preload="auto"></audio>
+
+  <script>
+    const knobs = document.querySelectorAll('.knob');
+    const windowDisplay = document.getElementById('window');
+    const messagePopup = document.getElementById('messagePopup');
+    const progressBar = document.getElementById('progressBar');
+    const nextScreen = document.getElementById('nextScreen');
+    const customPopup = document.getElementById('customPopup');
+    const correctCode = ['10', '25', '15', '35'];
+    const knobRotateSound = document.getElementById('knobRotateSound');
+    const loadingSound = document.getElementById('loadingSound');
+    const loadingCompleteSound = document.getElementById('loadingCompleteSound');
+
+    knobs.forEach((knob, index) => {
+      knob.addEventListener('click', () => {
+        rotateKnob(knob, index);
+      });
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight') {
+        rotateKnob(knobs[0], 0); // Rotazione della prima manopola al clic della freccia destra
+      } else if (event.key === 'ArrowLeft') {
+        rotateKnobAnticlockwise(knobs[0], 0); // Rotazione della prima manopola al clic della freccia sinistra
+      }
+    });
+
+    function rotateKnob(knob, index) {
+      let value = parseInt(knob.getAttribute('data-value')) || 0;
+      value = (value + 5) % 40; // Incrementa il valore di 5, reset a 0 dopo 39
+      knob.setAttribute('data-value', value);
+      knob.querySelector('span').innerText = value;
+      knob.style.transform = `rotate(${(value / 5) * 45}deg)`; // Ruota di 45° per ogni incremento
+      updateDisplay();
+      knobRotateSound.currentTime = 0; // Reset audio
+      knobRotateSound.play(); // Riproduci suono di rotazione
+    }
+
+    function rotateKnobAnticlockwise(knob, index) {
+      let value = parseInt(knob.getAttribute('data-value')) || 0;
+      value = (value - 5 + 40) % 40; // Decrementa il valore di 5, reset a 0 dopo 39
+      knob.setAttribute('data-value', value);
+      knob.querySelector('span').innerText = value;
+      knob.style.transform = `rotate(${(value / 5) * 45}deg)`; // Ruota di 45° per ogni decremento
+      updateDisplay();
+      knobRotateSound.currentTime = 0; // Reset audio
+      knobRotateSound.play(); // Riproduci suono di rotazione
+    }
+
+    function updateDisplay() {
+      let code = Array.from(knobs).map(knob => knob.getAttribute('data-value'));
+      windowDisplay.innerText = code.join(' ');
+      checkCode(code);
+    }
+
+    function checkCode(code) {
+      if (code.join('') === correctCode.join('')) {
+        messagePopup.style.display = 'block'; // Mostra il popup
+        loadingSound.play(); // Riproduci suono di caricamento
+        startLoadingBar();
+      }
+    }
+
+    function startLoadingBar() {
+      let width = 0;
+      let interval = setInterval(() => {
+        width += 1;
+        progressBar.style.width = width + '%';
+        if (width >= 100) {
+          clearInterval(interval);
+          loadingCompleteSound.play(); // Riproduci suono di completamento
+          setTimeout(() => {
+            progressBar.style.backgroundColor = 'green'; // Cambia colore in verde
+            setTimeout(() => {
+              messagePopup.style.display = 'none'; // Nasconde il popup
+              showNextScreen(); // Mostra la schermata successiva
+            }, 3000); // 3 secondi di attesa
+          }, 0);
+        }
+      }, 20); // Ogni 20ms aumenta di 1%
+    }
+
+    function showNextScreen() {
+      nextScreen.style.display = 'flex'; // Mostra la schermata successiva
+      customPopup.style.display = 'block'; // Mostra il popup personalizzato
+    }
+  </script>
+
+</body>
+</html>
